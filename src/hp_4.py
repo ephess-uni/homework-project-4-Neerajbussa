@@ -8,27 +8,57 @@ from collections import defaultdict
 def reformat_dates(old_dates):
     """Accepts a list of date strings in format yyyy-mm-dd, re-formats each
     element to a format dd mmm yyyy--01 Jan 2001."""
-    pass
+    return [datetime.strptime(date, "%Y-%m-%d").strftime('%d %b %Y') for date in old_dates]
 
 
 def date_range(start, n):
     """For input date string `start`, with format 'yyyy-mm-dd', returns
     a list of of `n` datetime objects starting at `start` where each
     element in the list is one day after the previous."""
-    pass
+    if not isinstance(start, str) or not isinstance(n, int):
+        raise TypeError()
+    dates = []
+    date_format = datetime.strptime(start, '%Y-%m-%d')
+    for a in range(n):
+        dates.append(date_format + timedelta(days=a))
+    return dates
 
 
 def add_date_range(values, start_date):
     """Adds a daily date range to the list `values` beginning with
     `start_date`.  The date, value pairs are returned as tuples
     in the returned list."""
-    pass
+    r = date_range(start_date, len(values))
+    finalList = list(zip(r, values))
+    return finalList
 
 
 def fees_report(infile, outfile):
     """Calculates late fees per patron id and writes a summary report to
     outfile."""
-    pass
+    columns = ("book_uid,isbn_13,patron_id,date_checkout,date_due,date_returned".split(','))
+    late_fees = defaultdict(float)
+    with open(infile, 'r') as f:
+        lines = DictReader(f, fieldnames=columns)
+        all_lines = [row for row in lines]
+    all_lines.pop(0)
+
+    for line in all_lines:
+        patronID = line['patron_id']
+        date_due = datetime.strptime(line['date_due'], "%m/%d/%Y")
+        date_returned = datetime.strptime(line['date_returned'], "%m/%d/%Y")
+        no_of_days_late = (date_returned - date_due).days
+        late_fees[patronID]+= 0.25 * no_of_days_late if no_of_days_late > 0 else 0.0
+    
+    output_data = [
+        {'patron_id': pn, 'late_fees': f'{fs:0.2f}'} for pn, fs in late_fees.items()
+    ]
+    with open(outfile, 'w') as of:
+        
+        writer = DictWriter(of,['patron_id', 'late_fees'])
+        writer.writeheader()
+        writer.writerows(output_data)
+
 
 
 # The following main selection block will only run when you choose
